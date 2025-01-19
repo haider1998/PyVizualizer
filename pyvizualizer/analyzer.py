@@ -19,9 +19,12 @@ class Analyzer:
     def analyze(self):
         """Performs the analysis of the project."""
         logger.info(f"Starting analysis of project at: {self.project_path}")
+        print(f"Starting analysis of project at: {self.project_path}")
         python_files = get_python_files(self.project_path)
         logger.debug(f"Python files found: {python_files}")
+        print(f"Python files found: {python_files}")
         self.parser.parse_files(python_files)
+        print(f"Parser definitions: {self.parser.definitions}")
         self.graph.build_graph(self.parser.definitions)
         logger.info("Analysis complete")
         return self.graph

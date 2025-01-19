@@ -18,7 +18,7 @@ class CodeParser:
     def parse_files(self, file_paths):
         """Parses multiple Python files."""
         for file_path in file_paths:
-            logger.debug(f"Parsing file: {file_path}")
+            print(f"Parsing file: {file_path}")
             try:
                 with open(file_path, 'r', encoding='utf-8') as file:
                     source = file.read()
@@ -46,7 +46,7 @@ class _DefinitionVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node):
         self.current_class = node.name
-        logger.debug(f"Found class: {self.current_class}")
+        print(f"Found class: {self.current_class}")
         class_info = {
             'type': 'class',
             'name': self.current_class,
@@ -59,7 +59,7 @@ class _DefinitionVisitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         function_name = node.name
         if self.current_class:
-            logger.debug(f"Found method: {function_name} in class {self.current_class}")
+            print(f"Found method: {function_name} in class {self.current_class}")
             # Find the class info in definitions
             for item in self.definitions:
                 if item['type'] == 'class' and item['name'] == self.current_class:
@@ -70,7 +70,7 @@ class _DefinitionVisitor(ast.NodeVisitor):
                     item['methods'].append(method_info)
                     break
         else:
-            logger.debug(f"Found function: {function_name}")
+            print(f"Found function: {function_name}")
             function_info = {
                 'type': 'function',
                 'name': function_name,
