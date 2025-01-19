@@ -2,7 +2,7 @@
 
 import logging
 from .utils import get_python_files
-from .parser import CodeParser
+from .parser import PyVizualizerParser
 from .graph import CodeGraph
 from .exceptions import PyVizualizerError
 
@@ -13,7 +13,7 @@ class Analyzer:
 
     def __init__(self, project_path: str):
         self.project_path = project_path
-        self.parser = CodeParser()
+        self.parser = PyVizualizerParser()
         self.graph = CodeGraph()
 
     def analyze(self):

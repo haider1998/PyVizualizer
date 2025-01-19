@@ -1,34 +1,22 @@
-# pyvizualizer/mermaid_generator.py
-
-import logging
-from .graph import CodeGraph
-from .exceptions import MermaidGenerationError
-
-logger = logging.getLogger('pyvizualizer')
-
 class MermaidGenerator:
-    """Generates Mermaid diagrams from the code graph."""
+    """
+    Generates Mermaid class diagrams from class data.
+    """
 
-    def __init__(self, graph: CodeGraph):
-        self.graph = graph
+    def __init__(self, class_data, layout_direction="TB"):
+        self.class_data = class_data
+        self.layout_direction = layout_direction
 
-    def generate(self):
-        """Generates Mermaid code representing the code graph."""
-        try:
-            logger.info("Generating Mermaid code")
-            lines = ["graph TD"]
-            for node_name, node in self.graph.nodes.items():
-                node_id = self._sanitize_node_id(node_name)
-                lines.append(f'    {node_id}["{node_name}"]')
-                for callee_name in node.calls:
-                    callee_id = self._sanitize_node_id(callee_name)
-                    lines.append(f'    {node_id} --> {callee_id}')
-            mermaid_code = '\n'.join(lines)
-            return mermaid_code
-        except Exception as e:
-            logger.error(f"Failed to generate Mermaid code: {e}")
-            raise MermaidGenerationError("An error occurred during Mermaid code generation") from e
-
-    def _sanitize_node_id(self, name):
-        """Sanitizes a node name to be used as a Mermaid node identifier."""
-        return name.replace('.', '_').replace('<', '').replace('>', '')
+    def generate_diagram(self):
+        """
+        Generates a Mermaid class diagram from the parsed class data.
+        """
+        diagram = [f"classDiagram\n  direction {self.layout_direction}"]
+        for class_name, details in self.class_data.items():
+            diagram.append(f"  class {class_name} {{")
+            for method in details["methods"]:
+                diagram.append(f"    + {method}()")
+            diagram.append("  }")
+            for base in details["bases"]:
+                diagram.append(f"  {base} <|-- {class_name}")
+        return "\n".join(diagram)

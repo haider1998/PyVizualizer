@@ -1,91 +1,76 @@
-# pyvizualizer/parser.py
-
 import ast
-from collections import defaultdict
-from typing import Dict, Set
-import logging
+import os
 
-from pyvizualizer.exceptions import FileParsingError
+class PyVizualizerParser:
+    """
+    Parses Python source code to extract class and method information,
+    identifying inheritance relationships.
+    """
 
-logger = logging.getLogger('pyvizualizer')
+    def __init__(self, root_dir, excludes=None):
+        self.root_dir = root_dir
+        self.excludes = excludes or []  # List of files or directories to exclude
+        self.class_data = {}
 
-class CodeParser:
-    """Parses Python code to extract class and function definitions."""
+    def parse(self):
+        """
+        Parses the Python files in the specified directory.
+        """
+        for root, _, files in os.walk(self.root_dir):
+            if any(exclude in root for exclude in self.excludes):
+                continue
+            for file in files:
+                if file.endswith(".py"):
+                    filepath = os.path.join(root, file)
+                    self.parse_file(filepath)
 
-    def __init__(self):
-        self.definitions = defaultdict(dict)  # module: {definitions}
+    def parse_file(self, filepath):
+        """
+        Parses a single Python file to extract class and method details.
+        """
+        try:
+            with open(filepath, "r") as f:
+                source = f.read()
+                tree = ast.parse(source)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef):
+                        self.parse_class(node, filepath)
+        except Exception as e:
+            print(f"Error parsing file {filepath}: {e}")
 
-    def parse_files(self, file_paths):
-        """Parses multiple Python files."""
-        for file_path in file_paths:
-            logger.debug(f"Parsing file: {file_path}")
-            try:
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    source = file.read()
-                tree = ast.parse(source, filename=file_path)
-                self._parse_tree(tree, file_path)
-            except (SyntaxError, FileNotFoundError) as e:
-                logger.error(f"Failed to parse {file_path}: {e}")
-                raise FileParsingError(f"Failed to parse {file_path}") from e
+    def parse_class(self, node, filepath):
+        """
+        Parses a class definition to record its name, methods, and inheritance.
+        """
+        class_name = node.name
+        methods = [
+            n.name
+            for n in ast.walk(node)
+            if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")
+        ]
+        # Handling simple inheritance, getting base class names
+        bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
 
-    def _parse_tree(self, tree, file_path):
-        """Parses an AST tree to extract definitions."""
-        visitor = _DefinitionVisitor(file_path)
-        visitor.visit(tree)
-        self.definitions[file_path] = visitor.definitions
-
-
-class _DefinitionVisitor(ast.NodeVisitor):
-    """AST visitor that records definitions and call relationships."""
-
-    def __init__(self, module_name):
-        self.module_name = module_name
-        self.definitions = []
-        self.current_class = None
-        self.current_function = None
-
-    def visit_ClassDef(self, node):
-        self.current_class = node.name
-        logger.debug(f"Found class: {self.current_class}")
-        class_info = {
-            'type': 'class',
-            'name': self.current_class,
-            'methods': [],
-        }
-        self.definitions.append(class_info)
-        self.generic_visit(node)
-        self.current_class = None
-
-    def visit_FunctionDef(self, node):
-        function_name = node.name
-        if self.current_class:
-            logger.debug(f"Found method: {function_name} in class {self.current_class}")
-            # Find the class info in definitions
-            for item in self.definitions:
-                if item['type'] == 'class' and item['name'] == self.current_class:
-                    method_info = {
-                        'name': function_name,
-                        'calls': self._extract_calls(node)
-                    }
-                    item['methods'].append(method_info)
-                    break
+        # Add or update class data
+        if class_name not in self.class_data:
+            self.class_data[class_name] = {"methods": methods, "bases": bases, "filepath": filepath}
         else:
-            logger.debug(f"Found function: {function_name}")
-            function_info = {
-                'type': 'function',
-                'name': function_name,
-                'calls': self._extract_calls(node)
-            }
-            self.definitions.append(function_info)
-        self.generic_visit(node)
+            # Update existing class data
+            existing_data = self.class_data[class_name]
+            existing_data["methods"].extend(
+                method for method in methods if method not in existing_data["methods"]
+            )
+            existing_data["bases"].extend(
+                base for base in bases if base not in existing_data["bases"]
+            )
+            if existing_data["filepath"] != filepath:
+                print(
+                    f"Warning: Class {class_name} is defined in multiple files: {existing_data['filepath']}, {filepath}"
+                )
+            existing_data["filepath"] = filepath  # Update with the latest file path if needed
 
-    def _extract_calls(self, node):
-        """Extracts function calls within a function/method body."""
-        calls = set()
-        for child in ast.walk(node):
-            if isinstance(child, ast.Call):
-                if isinstance(child.func, ast.Name):
-                    calls.add(child.func.id)
-                elif isinstance(child.func, ast.Attribute):
-                    calls.add(child.func.attr)
-        return list(calls)
+    def get_class_data(self):
+        """
+        Returns the collected class data.
+        """
+        return self.class_data
