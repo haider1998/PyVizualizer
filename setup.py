@@ -7,20 +7,19 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pyvisualizer",
-    version="0.1.0",
+    version="1.0.0",
     author="Syed Mohd Haider Rizvi",
     author_email="smhrizvi281@gmail.com",
     description="Architectural intelligence for Python codebases",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/haider1998/PyVisualizer",
+    url="https://github.com/haider1998/pyvisualizer",
     project_urls={
-        "Bug Tracker": "https://github.com/haider1998/PyVisualizer/issues",
-        "Documentation": "https://github.com/haider1998/PyVisualizer/wiki",
+        "Bug Tracker": "https://github.com/haider1998/pyvisualizer/issues",
+        "Documentation": "https://github.com/haider1998/pyvisualizer/wiki",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
