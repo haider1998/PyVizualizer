@@ -1,2 +1,0 @@
-[console_scripts]
-pyvizualizer = pyvizualizer.cli:main
