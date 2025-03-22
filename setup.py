@@ -2,32 +2,42 @@
 
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding='utf-8') as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="pyvizualizer",
+    name="pyvisualizer",
     version="0.1.0",
     author="Syed Mohd Haider Rizvi",
     author_email="smhrizvi281@gmail.com",
-    description="Visualize Python project workflows using Mermaid diagrams",
+    description="Architectural intelligence for Python codebases",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/haider1998/PyVizualizer",  # Link to your project's homepage
-    packages=find_packages(),
+    url="https://github.com/haider1998/PyVisualizer",
+    project_urls={
+        "Bug Tracker": "https://github.com/haider1998/PyVisualizer/issues",
+        "Documentation": "https://github.com/haider1998/PyVisualizer/wiki",
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Documentation",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires='>=3.8',
+    packages=find_packages(),
+    include_package_data=True,
+    python_requires=">=3.8",
     install_requires=[
-        # List your project's dependencies here.
-        # For example: 'numpy', 'requests', etc.
+        "networkx>=2.5",
+        "astroid>=2.5.0",
+        "lru-dict>=1.1.7",
     ],
     entry_points={
-        'console_scripts': [
-            'pyvizualizer=pyvizualizer.cli:main',
+        "console_scripts": [
+            "pyvisualizer=pyvisualizer.main:main",
         ],
     },
 )
