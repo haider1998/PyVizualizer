@@ -4,3 +4,6 @@ include pyvisualizer/py.typed
 recursive-include docs *
 recursive-include docs/images *
 recursive-include pyvisualizer *
+# Add these lines to exclude from package discovery
+prune pyvisualizer/docs/images
+prune pyvisualizer/examples/sample_project
