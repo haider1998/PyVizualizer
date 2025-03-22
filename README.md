@@ -40,9 +40,9 @@ Instead of spending hours tracing through imports and function calls manually, P
 ## 📊 Visualizations
 
 <div align="center">
-<img src="docs/images/Generated_Design.svg" alt="PyVisualizer Example" width="85%">
+<img src="docs/images/FatigueFinder_methods.svg" alt="PyVisualizer Example" width="85%">
 <br>
-<em>Interactive diagram of a Flask application's architecture</em>
+<em>Interactive diagram of a FastAPI & ML application's architecture</em>
 </div>
 
 ## 💻 Installation
