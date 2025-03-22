@@ -49,7 +49,7 @@ Instead of spending hours tracing through imports and function calls manually, P
 
 ```bash
 # Via pip (recommended)
-pip install pyvisualizer
+pip install py-code-visualizer
 
 # From source
 git clone https://github.com/haider1998/PyVisualizer.git
@@ -105,7 +105,7 @@ Keep architecture diagrams current by integrating with your CI/CD pipeline:
 steps:
   - name: Generate Architecture Diagram
     run: |
-      pip install pyvisualizer
+      pip install py-code-visualizer
       pyvisualizer . -o docs/architecture.svg
       git config user.name github-actions
       git config user.email github-actions@github.com
