@@ -1868,6 +1868,1396 @@ def export_diagram(mermaid_code: str, output_path: str, output_format: str = 'me
             logger.info(f"Interactive HTML diagram saved to {html_path}")
 
 
+def create_d3_html_template(graph_data: dict, project_name: str) -> str:
+    """Create an HTML template with D3.js visualization."""
+    # Convert graph data to JSON string
+    import json
+    graph_json = json.dumps(graph_data)
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{project_name} - Code Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {{
+            --primary-color: #5D2E8C;
+            --secondary-color: #2962FF;
+            --accent-color: #00C853;
+            --danger-color: #F44336;
+            --warning-color: #FF9800;
+            --text-color: #212121;
+            --text-secondary: #757575;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0,0,0,0.1);
+            --node-constructor: #E53935;
+            --node-method: #2962FF;
+            --node-function: #00C853;
+            --node-property: #FF6D00;
+            --node-async: #AA00FF;
+            --node-private: #757575;
+            --node-cycle: #F44336;
+            --link-normal: #616161;
+            --link-cycle: #F44336;
+        }}
+
+        body.dark-mode {{
+            --primary-color: #9C64FE;
+            --secondary-color: #448AFF;
+            --accent-color: #4CD964;
+            --danger-color: #FF5252;
+            --warning-color: #FFAB40;
+            --text-color: #EEEEEE;
+            --text-secondary: #BDBDBD;
+            --background-color: #121212;
+            --card-bg-color: #1E1E1E;
+            --border-color: #333333;
+            --shadow-color: rgba(0,0,0,0.5);
+            --node-constructor: #FF5252;
+            --node-method: #448AFF;
+            --node-function: #4CD964;
+            --node-property: #FFAB40;
+            --node-async: #CE93D8;
+            --node-private: #BDBDBD;
+            --node-cycle: #FF5252;
+            --link-normal: #BDBDBD;
+            --link-cycle: #FF5252;
+        }}
+
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }}
+
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
+        }}
+
+        header {{
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }}
+
+        .project-title {{
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }}
+
+        .project-title i {{
+            margin-right: 0.5rem;
+            font-size: 1.25rem;
+        }}
+
+        .header-controls {{
+            display: flex;
+            gap: 0.75rem;
+        }}
+
+        .theme-toggle {{
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }}
+
+        .theme-toggle:hover {{
+            background: rgba(255, 255, 255, 0.3);
+        }}
+
+        .layout-container {{
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }}
+
+        .sidebar {{
+            width: 300px;
+            background-color: var(--card-bg-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 5;
+            overflow-y: auto;
+        }}
+
+        .sidebar.collapsed {{
+            transform: translateX(-100%);
+        }}
+
+        .sidebar-toggle {{
+            position: absolute;
+            left: 300px;
+            top: 5rem;
+            background: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 2px 0 5px var(--shadow-color);
+            transition: left 0.3s ease;
+        }}
+
+        .sidebar-toggle.collapsed {{
+            left: 0;
+        }}
+
+        .controls-section {{
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }}
+
+        .controls-section h3 {{
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+        }}
+
+        .controls-section h3 i {{
+            margin-right: 0.5rem;
+        }}
+
+        .search-box {{
+            position: relative;
+            margin-bottom: 1rem;
+        }}
+
+        .search-box input {{
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            background-color: var(--card-bg-color);
+            transition: border-color 0.3s;
+        }}
+
+        .search-box i {{
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }}
+
+        select {{
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            background-color: var(--card-bg-color);
+            margin-bottom: 1rem;
+        }}
+
+        .filter-label {{
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }}
+
+        .btn-group {{
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }}
+
+        button {{
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }}
+
+        button i {{
+            margin-right: 0.5rem;
+        }}
+
+        .btn-primary {{
+            background-color: var(--primary-color);
+            color: white;
+        }}
+
+        .btn-primary:hover {{
+            background-color: var(--secondary-color);
+        }}
+
+        .btn-secondary {{
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }}
+
+        .btn-secondary:hover {{
+            background-color: var(--border-color);
+        }}
+
+        .metrics-section {{
+            padding: 1rem;
+        }}
+
+        .metric-card {{
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }}
+
+        .metric-title {{
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }}
+
+        .metric-value {{
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }}
+
+        .metrics-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }}
+
+        .cycles-section {{
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }}
+
+        .cycle-item {{
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }}
+
+        .cycle-item:hover {{
+            background-color: rgba(var(--primary-color-rgb), 0.1);
+        }}
+
+        .cycle-header {{
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }}
+
+        .cycle-id {{
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-right: 0.75rem;
+        }}
+
+        .cycle-length {{
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }}
+
+        .cycle-description {{
+            font-size: 0.9rem;
+            word-break: break-word;
+        }}
+
+        .main-content {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }}
+
+        .toolbar {{
+            padding: 0.75rem;
+            background-color: var(--card-bg-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+
+        .zoom-controls {{
+            display: flex;
+            gap: 0.5rem;
+        }}
+
+        .zoom-controls button {{
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+
+        .zoom-controls button i {{
+            margin: 0;
+        }}
+
+        .viz-controls {{
+            display: flex;
+            gap: 0.5rem;
+        }}
+
+        #graph-container {{
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }}
+
+        svg {{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }}
+
+        .tooltip {{
+            position: absolute;
+            padding: 0.75rem;
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            max-width: 300px;
+            z-index: 1000;
+        }}
+
+        .tooltip h4 {{
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }}
+
+        .tooltip p {{
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }}
+
+        .tooltip .badge {{
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            margin-right: 0.25rem;
+        }}
+
+        .badge-constructor {{
+            background-color: var(--node-constructor);
+        }}
+
+        .badge-method {{
+            background-color: var(--node-method);
+        }}
+
+        .badge-function {{
+            background-color: var(--node-function);
+        }}
+
+        .badge-property {{
+            background-color: var(--node-property);
+        }}
+
+        .badge-async {{
+            background-color: var(--node-async);
+        }}
+
+        .badge-private {{
+            background-color: var(--node-private);
+        }}
+
+        .badge-cycle {{
+            background-color: var(--node-cycle);
+        }}
+
+        .node {{
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }}
+
+        .node circle, .node rect {{
+            transition: all 0.3s;
+        }}
+
+        .node text {{
+            dominant-baseline: central;
+            text-anchor: middle;
+            font-size: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none;
+            transition: all 0.3s;
+        }}
+
+        .node.faded {{
+            opacity: 0.2;
+        }}
+
+        .node.highlighted circle, .node.highlighted rect {{
+            stroke-width: 3px;
+            stroke: #FFF;
+            filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+        }}
+
+        .link {{
+            stroke-opacity: 0.6;
+            transition: stroke-opacity 0.3s, stroke-width 0.3s;
+        }}
+
+        .link.faded {{
+            stroke-opacity: 0.1;
+        }}
+
+        .link.highlighted {{
+            stroke-opacity: 1;
+            stroke-width: 2.5px;
+        }}
+
+        .legend {{
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.75rem;
+            box-shadow: 0 2px 5px var(--shadow-color);
+            z-index: 5;
+        }}
+
+        .legend-title {{
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }}
+
+        .legend-items {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }}
+
+        .legend-item {{
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+        }}
+
+        .legend-color {{
+            width: 1rem;
+            height: 1rem;
+            border-radius: 3px;
+            margin-right: 0.5rem;
+        }}
+
+        .loading-overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            color: white;
+            flex-direction: column;
+        }}
+
+        .loading-spinner {{
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }}
+
+        @keyframes spin {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
+        }}
+
+        @media (max-width: 768px) {{
+            .sidebar {{
+                position: absolute;
+                height: 100%;
+                transform: translateX(-100%);
+            }}
+
+            .sidebar.active {{
+                transform: translateX(0);
+            }}
+
+            .sidebar-toggle {{
+                left: 0;
+            }}
+
+            .sidebar-toggle.active {{
+                left: 300px;
+            }}
+
+            .metrics-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            .toolbar {{
+                flex-wrap: wrap;
+            }}
+
+            .zoom-controls, .viz-controls {{
+                margin-bottom: 0.5rem;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="project-title">
+            <i class="fas fa-project-diagram"></i>
+            {project_name}
+        </div>
+        <div class="header-controls">
+            <button class="theme-toggle" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="layout-container">
+        <aside class="sidebar">
+            <div class="controls-section">
+                <h3><i class="fas fa-search"></i> Search & Filter</h3>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search methods or classes...">
+                </div>
+
+                <label class="filter-label">Module Filter</label>
+                <select id="module-filter">
+                    <option value="">All Modules</option>
+                    <!-- Will be populated by JS -->
+                </select>
+
+                <label class="filter-label">Node Type Filter</label>
+                <select id="type-filter">
+                    <option value="">All Types</option>
+                    <option value="constructor">Constructors</option>
+                    <option value="method">Methods</option>
+                    <option value="function">Functions</option>
+                    <option value="property">Properties</option>
+                    <option value="async">Async Methods</option>
+                    <option value="private">Private Methods</option>
+                </select>
+
+                <div class="btn-group">
+                    <button id="highlight-cycles" class="btn-primary">
+                        <i class="fas fa-sync-alt"></i> Highlight Cycles
+                    </button>
+                    <button id="reset-filters" class="btn-secondary">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="metrics-section">
+                <h3><i class="fas fa-chart-bar"></i> Project Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-title">Total Methods</div>
+                        <div class="metric-value" id="total-methods">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Total Modules</div>
+                        <div class="metric-value" id="total-modules">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Relationships</div>
+                        <div class="metric-value" id="total-relationships">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Cyclic Dependencies</div>
+                        <div class="metric-value" id="total-cycles">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cycles-section">
+                <h3><i class="fas fa-exclamation-triangle"></i> Cyclic Dependencies</h3>
+                <div id="cycles-list">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+        </aside>
+
+        <div class="sidebar-toggle">
+            <i class="fas fa-chevron-right"></i>
+        </div>
+
+        <main class="main-content">
+            <div class="toolbar">
+                <div class="zoom-controls">
+                    <button id="zoom-in" class="btn-secondary" aria-label="Zoom in">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button id="zoom-out" class="btn-secondary" aria-label="Zoom out">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button id="zoom-reset" class="btn-secondary" aria-label="Reset zoom">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+                <div class="viz-controls">
+                    <button id="export-svg" class="btn-primary">
+                        <i class="fas fa-download"></i> Export SVG
+                    </button>
+                    <button id="toggle-force" class="btn-secondary">
+                        <i class="fas fa-pause"></i> Pause Layout
+                    </button>
+                </div>
+            </div>
+
+            <div id="graph-container">
+                <!-- D3 visualization will be rendered here -->
+            </div>
+
+            <div class="tooltip" id="node-tooltip"></div>
+
+            <div class="legend">
+                <div class="legend-title">Legend</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-constructor)"></div>
+                        <span>Constructor</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-method)"></div>
+                        <span>Method</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-function)"></div>
+                        <span>Function</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-property)"></div>
+                        <span>Property</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-async)"></div>
+                        <span>Async</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-private)"></div>
+                        <span>Private</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--node-cycle)"></div>
+                        <span>In Cycle</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color:var(--link-cycle)"></div>
+                        <span>Cyclic Link</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div>Building visualization...</div>
+    </div>
+
+    <script>
+        // Store graph data from Python
+        const graphData = {graph_json};
+
+        // DOM elements
+        const graphContainer = document.getElementById('graph-container');
+        const tooltip = document.getElementById('node-tooltip');
+        const searchInput = document.getElementById('search-input');
+        const moduleFilter = document.getElementById('module-filter');
+        const typeFilter = document.getElementById('type-filter');
+        const highlightCyclesBtn = document.getElementById('highlight-cycles');
+        const resetFiltersBtn = document.getElementById('reset-filters');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const zoomResetBtn = document.getElementById('zoom-reset');
+        const exportSvgBtn = document.getElementById('export-svg');
+        const toggleForceBtn = document.getElementById('toggle-force');
+        const themeToggle = document.querySelector('.theme-toggle');
+        const sidebarToggle = document.querySelector('.sidebar-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        const cyclesList = document.getElementById('cycles-list');
+        const loadingOverlay = document.getElementById('loading');
+
+        // Populate metrics
+        document.getElementById('total-methods').textContent = graphData.project_info.total_nodes;
+        document.getElementById('total-modules').textContent = graphData.project_info.modules.length;
+        document.getElementById('total-relationships').textContent = graphData.project_info.total_links;
+        document.getElementById('total-cycles').textContent = graphData.project_info.total_cycles;
+
+        // Populate module filter
+        graphData.project_info.modules.sort().forEach(module => {{
+            const option = document.createElement('option');
+            option.value = module;
+            option.textContent = module;
+            moduleFilter.appendChild(option);
+        }});
+
+        // Populate cycles list
+        if (graphData.cycles.length === 0) {{
+            cyclesList.innerHTML = '<p style="color:var(--text-secondary);font-size:0.9rem;">No cyclic dependencies detected.</p>';
+        }} else {{
+            graphData.cycles.forEach(cycle => {{
+                const cycleItem = document.createElement('div');
+                cycleItem.className = 'cycle-item';
+                cycleItem.dataset.nodes = JSON.stringify(cycle.nodes);
+
+                cycleItem.innerHTML = `
+                    <div class="cycle-header">
+                        <div class="cycle-id">${{cycle.id + 1}}</div>
+                        <div class="cycle-length">${{cycle.length}} nodes</div>
+                    </div>
+                    <div class="cycle-description">${{cycle.description}}</div>
+                `;
+
+                cyclesList.appendChild(cycleItem);
+            }});
+        }}
+
+        // Theme toggling
+        let darkMode = false;
+        themeToggle.addEventListener('click', () => {{
+            darkMode = !darkMode;
+            document.body.classList.toggle('dark-mode', darkMode);
+            themeToggle.innerHTML = darkMode 
+                ? '<i class="fas fa-sun"></i>' 
+                : '<i class="fas fa-moon"></i>';
+        }});
+
+        // Sidebar toggling
+        let sidebarCollapsed = false;
+        sidebarToggle.addEventListener('click', () => {{
+            sidebarCollapsed = !sidebarCollapsed;
+            sidebar.classList.toggle('collapsed', sidebarCollapsed);
+            sidebarToggle.classList.toggle('collapsed', sidebarCollapsed);
+            sidebarToggle.innerHTML = sidebarCollapsed 
+                ? '<i class="fas fa-chevron-right"></i>' 
+                : '<i class="fas fa-chevron-left"></i>';
+        }});
+
+        // D3.js visualization
+        let svg, simulation, nodeElements, linkElements;
+        let width, height;
+        let zoom;
+        let isDragging = false;
+
+        // Set initial node positions using a radial layout
+        const setInitialPositions = () => {{
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.35;
+
+            // Group nodes by module
+            const moduleGroups = {{}};
+            graphData.nodes.forEach(node => {{
+                if (!moduleGroups[node.module]) {{
+                    moduleGroups[node.module] = [];
+                }}
+                moduleGroups[node.module].push(node);
+            }});
+
+            // Position nodes in a circle, grouped by module
+            const moduleCount = Object.keys(moduleGroups).length;
+            let moduleIndex = 0;
+
+            for (const module in moduleGroups) {{
+                const moduleAngle = (Math.PI * 2 * moduleIndex) / moduleCount;
+                const moduleRadius = radius * 0.8;
+                const moduleX = centerX + moduleRadius * Math.cos(moduleAngle);
+                const moduleY = centerY + moduleRadius * Math.sin(moduleAngle);
+
+                const nodes = moduleGroups[module];
+                const nodeCount = nodes.length;
+
+                nodes.forEach((node, i) => {{
+                    const nodeAngle = moduleAngle + (Math.PI * 0.5 * (i - nodeCount / 2) / nodeCount);
+                    const nodeRadius = radius * 0.4;
+                    node.x = moduleX + nodeRadius * Math.cos(nodeAngle);
+                    node.y = moduleY + nodeRadius * Math.sin(nodeAngle);
+                }});
+
+                moduleIndex++;
+            }}
+        }};
+
+        // Initialize the visualization
+        const initializeVisualization = () => {{
+            width = graphContainer.clientWidth;
+            height = graphContainer.clientHeight;
+
+            // Create SVG element
+            svg = d3.select('#graph-container')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .attr('viewBox', [0, 0, width, height])
+                .attr('style', 'max-width: 100%; height: auto;');
+
+            // Create SVG groups for links and nodes with proper layering
+            const g = svg.append('g');
+            const linksGroup = g.append('g').attr('class', 'links');
+            const nodesGroup = g.append('g').attr('class', 'nodes');
+
+            // Setup zoom behavior
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 10])
+                .on('zoom', (event) => {{
+                    g.attr('transform', event.transform);
+                }});
+
+            svg.call(zoom);
+
+            // Set initial positions
+            setInitialPositions();
+
+            // Create links
+            linkElements = linksGroup.selectAll('line')
+                .data(graphData.links)
+                .enter()
+                .append('line')
+                .attr('class', d => `link ${{d.is_cycle ? 'cycle-link' : ''}}`)
+                .attr('stroke', d => d.is_cycle ? 'var(--link-cycle)' : 'var(--link-normal)')
+                .attr('stroke-width', d => d.is_cycle ? 2 : 1.5)
+                .attr('marker-end', d => d.is_cycle ? 'url(#arrow-cycle)' : 'url(#arrow)');
+
+            // Create nodes
+            nodeElements = nodesGroup.selectAll('.node')
+                .data(graphData.nodes)
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded));
+
+            // Add node shapes based on category
+            nodeElements.each(function(d) {{
+                const node = d3.select(this);
+
+                // Determine color based on category and cycle status
+                let color = d.in_cycle ? 'var(--node-cycle)' : 
+                            d.category === 'constructor' ? 'var(--node-constructor)' :
+                            d.category === 'property' ? 'var(--node-property)' :
+                            d.category === 'async' ? 'var(--node-async)' :
+                            d.category === 'private' ? 'var(--node-private)' :
+                            d.category === 'method' ? 'var(--node-method)' :
+                            'var(--node-function)';
+
+                // Use different shapes for different categories
+                if (d.category === 'function') {{
+                    node.append('circle')
+                        .attr('r', 10)
+                        .attr('fill', color)
+                        .attr('stroke', 'white')
+                        .attr('stroke-width', 1.5);
+                }} else {{
+                    node.append('rect')
+                        .attr('width', 20)
+                        .attr('height', 20)
+                        .attr('x', -10)
+                        .attr('y', -10)
+                        .attr('rx', 4)
+                        .attr('fill', color)
+                        .attr('stroke', 'white')
+                        .attr('stroke-width', 1.5);
+                }}
+
+                // Add text labels
+                node.append('text')
+                    .attr('dy', 25)
+                    .text(d.name)
+                    .attr('fill', 'var(--text-color)')
+                    .attr('font-weight', d.in_cycle ? 'bold' : 'normal');
+            }});
+
+            // Define arrow markers
+            svg.append('defs').selectAll('marker')
+                .data(['arrow', 'arrow-cycle'])
+                .enter().append('marker')
+                .attr('id', d => d)
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 20)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', d => d === 'arrow-cycle' ? 'var(--link-cycle)' : 'var(--link-normal)');
+
+            // Initialize force simulation
+            simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.links)
+                    .id(d => d.id)
+                    .distance(70)
+                    .strength(0.6))
+                .force('charge', d3.forceManyBody()
+                    .strength(-200)
+                    .distanceMax(300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collide', d3.forceCollide(30))
+                .on('tick', ticked);
+
+            // Add tooltips
+            nodeElements
+                .on('mouseover', showTooltip)
+                .on('mousemove', moveTooltip)
+                .on('mouseout', hideTooltip)
+                .on('click', highlightRelationships);
+
+            // Hide loading overlay
+            loadingOverlay.style.display = 'none';
+        }};
+
+        // Update positions on each tick
+        function ticked() {{
+            linkElements
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            nodeElements
+                .attr('transform', d => `translate(${{d.x}}, ${{d.y}})`);
+        }}
+
+        // Drag functions
+        function dragStarted(event, d) {{
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+            isDragging = true;
+        }}
+
+        function dragged(event, d) {{
+            d.fx = event.x;
+            d.fy = event.y;
+        }}
+
+        function dragEnded(event, d) {{
+            if (!event.active) simulation.alphaTarget(0);
+            isDragging = false;
+        }}
+
+        // Tooltip functions
+        function showTooltip(event, d) {{
+            // Get category badge
+            const badge = `badge-${{d.category}}`;
+
+            // Format full name for display
+            let displayName = d.full_name;
+            if (displayName.length > 50) {{
+                displayName = displayName.substring(0, 47) + '...';
+            }}
+
+            // Build HTML content
+            tooltip.innerHTML = `
+                <h4>${{d.name}}</h4>
+                <p><strong>Module:</strong> ${{d.module}}</p>
+                ${{d.class ? `<p><strong>Class:</strong> ${{d.class.split('.').pop()}}</p>` : ''}}
+                <p><strong>Type:</strong> <span class="badge ${{badge}}">${{d.category}}</span></p>
+                ${{d.in_cycle ? '<p><span class="badge badge-cycle">Cyclic Dependency</span></p>' : ''}}
+            `;
+
+            // Show and position the tooltip
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY + 10) + 'px';
+            tooltip.style.opacity = 1;
+        }}
+
+        function moveTooltip(event) {{
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY + 10) + 'px';
+        }}
+
+        function hideTooltip() {{
+            tooltip.style.opacity = 0;
+        }}
+
+        // Highlight related nodes and links
+        function highlightRelationships(event, d) {{
+            // Skip if dragging
+            if (isDragging) return;
+
+            // Reset all nodes and links
+            nodeElements.classed('highlighted', false).classed('faded', false);
+            linkElements.classed('highlighted', false).classed('faded', false);
+
+            // Get connected node IDs (both incoming and outgoing)
+            const connectedNodes = new Set();
+            linkElements.each(link => {{
+                if (link.source.id === d.id || link.target.id === d.id) {{
+                    connectedNodes.add(link.source.id);
+                    connectedNodes.add(link.target.id);
+                }}
+            }});
+
+            // Highlight the selected node and its connections
+            nodeElements.classed('highlighted', node => node.id === d.id);
+            nodeElements.classed('faded', node => node.id !== d.id && !connectedNodes.has(node.id));
+
+            linkElements.classed('highlighted', link => link.source.id === d.id || link.target.id === d.id);
+            linkElements.classed('faded', link => link.source.id !== d.id && link.target.id !== d.id);
+        }}
+
+        // Filter nodes and links
+        function applyFilters() {{
+            const searchTerm = searchInput.value.toLowerCase();
+            const moduleValue = moduleFilter.value;
+            const typeValue = typeFilter.value;
+
+            nodeElements.each(function(d) {{
+                const nameMatch = d.name.toLowerCase().includes(searchTerm) || 
+                                 d.full_name.toLowerCase().includes(searchTerm);
+                const moduleMatch = !moduleValue || d.module === moduleValue;
+                const typeMatch = !typeValue || d.category === typeValue;
+
+                const visible = nameMatch && moduleMatch && typeMatch;
+                d3.select(this).style('display', visible ? 'block' : 'none');
+            }});
+
+            linkElements.each(function(d) {{
+                const sourceVisible = isNodeVisible(d.source);
+                const targetVisible = isNodeVisible(d.target);
+                d3.select(this).style('display', (sourceVisible && targetVisible) ? 'block' : 'none');
+            }});
+        }}
+
+        function isNodeVisible(node) {{
+            const element = nodeElements.filter(d => d.id === node.id).node();
+            return element && getComputedStyle(element).display !== 'none';
+        }}
+
+        // Highlight cycle nodes and links
+        function highlightCycles() {{
+            // Reset all nodes and links
+            nodeElements.classed('highlighted', false).classed('faded', true);
+            linkElements.classed('highlighted', false).classed('faded', true);
+
+            // Highlight cycle nodes and links
+            nodeElements.classed('highlighted', d => d.in_cycle)
+                        .classed('faded', d => !d.in_cycle);
+
+            linkElements.classed('highlighted', d => d.is_cycle)
+                        .classed('faded', d => !d.is_cycle);
+        }}
+
+        // Reset all filters and highlights
+        function resetFilters() {{
+            searchInput.value = '';
+            moduleFilter.value = '';
+            typeFilter.value = '';
+
+            nodeElements.style('display', 'block')
+                        .classed('highlighted', false)
+                        .classed('faded', false);
+
+            linkElements.style('display', 'block')
+                        .classed('highlighted', false)
+                        .classed('faded', false);
+        }}
+
+        // Export SVG
+        function exportSVG() {{
+            // Create a copy of the SVG with proper sizing
+            const svgCopy = svg.node().cloneNode(true);
+
+            // Get the bounding box of all elements
+            const bbox = svg.select('g').node().getBBox();
+
+            // Set proper attributes for the copied SVG
+            svgCopy.setAttribute('width', bbox.width + 100);
+            svgCopy.setAttribute('height', bbox.height + 100);
+            svgCopy.setAttribute('viewBox', `${{bbox.x - 50}} ${{bbox.y - 50}} ${{bbox.width + 100}} ${{bbox.height + 100}}`);
+
+            // Add some styling
+            const style = document.createElement('style');
+            style.textContent = `
+                .node circle, .node rect {{ stroke-width: 1.5px; }}
+                .node text {{ font-family: Arial; font-size: 10px; }}
+                .link {{ stroke-opacity: 0.6; }}
+            `;
+            svgCopy.insertBefore(style, svgCopy.firstChild);
+
+            // Convert to blob and download
+            const svgData = new XMLSerializer().serializeToString(svgCopy);
+            const blob = new Blob([svgData], {{ type: 'image/svg+xml' }});
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '{project_name}_visualization.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}
+
+        // Toggle force simulation
+        let simulationPaused = false;
+        function toggleForce() {{
+            if (simulationPaused) {{
+                simulation.alphaTarget(0.1).restart();
+                toggleForceBtn.innerHTML = '<i class="fas fa-pause"></i> Pause Layout';
+            }} else {{
+                simulation.alphaTarget(0).stop();
+                toggleForceBtn.innerHTML = '<i class="fas fa-play"></i> Resume Layout';
+            }}
+            simulationPaused = !simulationPaused;
+        }}
+
+        // Zoom controls
+        function zoomIn() {{
+            svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+        }}
+
+        function zoomOut() {{
+            svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+        }}
+
+        function resetZoom() {{
+            svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+        }}
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', initializeVisualization);
+        searchInput.addEventListener('input', applyFilters);
+        moduleFilter.addEventListener('change', applyFilters);
+        typeFilter.addEventListener('change', applyFilters);
+        highlightCyclesBtn.addEventListener('click', highlightCycles);
+        resetFiltersBtn.addEventListener('click', resetFilters);
+        zoomInBtn.addEventListener('click', zoomIn);
+        zoomOutBtn.addEventListener('click', zoomOut);
+        zoomResetBtn.addEventListener('click', resetZoom);
+        exportSvgBtn.addEventListener('click', exportSVG);
+        toggleForceBtn.addEventListener('click', toggleForce);
+
+        // Cycle item click handlers
+        document.querySelectorAll('#cycles-list .cycle-item').forEach(item => {{
+            item.addEventListener('click', () => {{
+                const nodes = JSON.parse(item.dataset.nodes);
+
+                // Reset all nodes and links
+                nodeElements.classed('highlighted', false).classed('faded', true);
+                linkElements.classed('highlighted', false).classed('faded', true);
+
+                // Highlight cycle nodes and their links
+                const cycleNodeIds = new Set(nodes);
+
+                nodeElements.classed('highlighted', d => cycleNodeIds.has(d.id))
+                            .classed('faded', d => !cycleNodeIds.has(d.id));
+
+                linkElements.classed('highlighted', d => 
+                    cycleNodeIds.has(d.source.id) && cycleNodeIds.has(d.target.id))
+                            .classed('faded', d => 
+                    !(cycleNodeIds.has(d.source.id) && cycleNodeIds.has(d.target.id)));
+
+                // If on mobile, collapse the sidebar
+                if (window.innerWidth <= 768) {{
+                    sidebar.classList.add('collapsed');
+                    sidebarToggle.classList.add('collapsed');
+                    sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                    sidebarCollapsed = true;
+                }}
+            }});
+        }});
+
+        // Window resize handler
+        window.addEventListener('resize', () => {{
+            width = graphContainer.clientWidth;
+            height = graphContainer.clientHeight;
+
+            svg.attr('width', width)
+               .attr('height', height)
+               .attr('viewBox', [0, 0, width, height]);
+
+            simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+        }});
+    </script>
+</body>
+</html>
+    """
+
+    return html
+
+
+def generate_d3_visualization(G: nx.DiGraph, output_path: str, project_name: str):
+    """Generate an interactive D3.js visualization."""
+
+    # Extract node data with all necessary attributes
+    nodes_data = []
+    for node in G.nodes():
+        node_type = "method" if G.nodes[node].get("class") else "function"
+        module = G.nodes[node].get("module", "")
+        class_name = G.nodes[node].get("class", "")
+        name = node.split(".")[-1]
+
+        # Get node metadata for display
+        is_async = G.nodes[node].get("is_async", False)
+        is_property = G.nodes[node].get("is_property", False)
+        is_private = name.startswith('_') and not name.startswith('__') and not name.endswith('__')
+        is_constructor = name == "__init__" or name == "__new__"
+
+        # Determine node category for styling
+        category = "constructor" if is_constructor else \
+            "property" if is_property else \
+                "async" if is_async else \
+                    "private" if is_private else \
+                        node_type
+
+        nodes_data.append({
+            "id": node,
+            "name": name,
+            "full_name": node,
+            "module": module,
+            "class": class_name,
+            "category": category,
+            "in_cycle": False,  # Will be updated after cycle detection
+            "lineno": G.nodes[node].get("lineno", 0),
+            "file_path": G.nodes[node].get("path", "")
+        })
+
+    # Extract edge data
+    links_data = []
+    for source, target, data in G.edges(data=True):
+        links_data.append({
+            "source": source,
+            "target": target,
+            "is_cycle": data.get("is_cycle", False),
+            "lineno": data.get("lineno", 0)
+        })
+
+    # Detect cycles
+    try:
+        cycles = list(nx.simple_cycles(G))
+
+        # Mark nodes that are part of cycles
+        cycle_nodes = set()
+        for cycle in cycles:
+            for node in cycle:
+                cycle_nodes.add(node)
+
+        # Update node data with cycle information
+        for node_data in nodes_data:
+            if node_data["id"] in cycle_nodes:
+                node_data["in_cycle"] = True
+
+        # Create cycle metadata for display
+        cycles_info = []
+        for i, cycle in enumerate(cycles):
+            cycles_info.append({
+                "id": i,
+                "nodes": cycle,
+                "length": len(cycle),
+                "description": " → ".join([n.split(".")[-1] for n in cycle + [cycle[0]]])
+            })
+
+    except Exception as e:
+        logger.warning(f"Could not detect cycles: {str(e)}")
+        cycles_info = []
+
+    # Prepare node and link data for D3
+    graph_data = {
+        "nodes": nodes_data,
+        "links": links_data,
+        "cycles": cycles_info,
+        "project_info": {
+            "name": project_name,
+            "total_nodes": len(nodes_data),
+            "total_links": len(links_data),
+            "modules": list(set(n["module"] for n in nodes_data)),
+            "total_cycles": len(cycles_info)
+        }
+    }
+
+    # Generate HTML with embedded D3.js visualization
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(create_d3_html_template(graph_data, project_name))
+
+    logger.info(f"D3.js visualization saved to {output_path}")
+    return True
+
+
+
+
 def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
@@ -1878,16 +3268,16 @@ def main():
     parser.add_argument('--output', '-o', help='Output file path (default: stdout)')
     parser.add_argument(
         '--format', '-f',
-        choices=['mermaid', 'png', 'svg'],
-        default='mermaid',
-        help='Output format'
+        choices=['html', 'mermaid', 'svg', 'png'],
+        default='html',
+        help='Output format: html (interactive D3.js), mermaid (simple diagram), svg/png (static image)'
     )
     parser.add_argument('--modules', '-m', nargs='+', help='Filter by module names')
     parser.add_argument('--depth', '-d', type=int, help='Maximum call depth from entry point')
     parser.add_argument('--entry', '-e', help='Entry point function (format: module.function)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     parser.add_argument('--exclude', '-x', nargs='+', help='Exclude modules matching these patterns')
-    parser.add_argument('--max-nodes', type=int, default=100, help='Maximum number of nodes to include in the diagram')
+    parser.add_argument('--max-nodes', type=int, default=150, help='Maximum number of nodes to include in the diagram')
     parser.add_argument('--project-name', '-p', help='Project name to use in diagram title')
 
     args = parser.parse_args()
@@ -1957,16 +3347,100 @@ def main():
         logger.warning("No functions to visualize after applying filters")
         sys.exit(0)
 
-    mermaid_code = generate_styled_mermaid(G)
+    # Set default output path if not provided
+    if not args.output:
+        args.output = f"{project_name}_visualization.{args.format}"
 
-    if args.output:
-        # Ensure the directory exists
-        output_dir = os.path.dirname(os.path.abspath(args.output))
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-        export_diagram(mermaid_code, args.output, args.format, project_name)
+    # Ensure the directory exists
+    output_dir = os.path.dirname(os.path.abspath(args.output))
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    # Generate the appropriate visualization based on format
+    if args.format == 'html':
+        logger.info("Generating interactive D3.js visualization...")
+        generate_d3_visualization(G, args.output, project_name)
+    elif args.format == 'mermaid':
+        logger.info("Generating Mermaid diagram...")
+        mermaid_code = generate_styled_mermaid(G)
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(mermaid_code)
+        # Also generate HTML version for better viewing
+        html_path = f"{os.path.splitext(args.output)[0]}.html"
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(create_interactive_html(mermaid_code, project_name))
+        logger.info(f"Mermaid diagram saved to {args.output}")
+        logger.info(f"Interactive HTML version saved to {html_path}")
+    elif args.format in ['svg', 'png']:
+        try:
+            import graphviz
+            logger.info(f"Generating {args.format.upper()} using Graphviz...")
+
+            # Create graphviz graph
+            dot = graphviz.Digraph(
+                comment=f'{project_name} Code Structure',
+                engine='dot',
+                format=args.format,
+                graph_attr={
+                    'rankdir': 'LR',
+                    'bgcolor': 'transparent',
+                    'fontname': 'Arial',
+                    'nodesep': '0.8',
+                    'ranksep': '1.0'
+                }
+            )
+
+            # Add nodes with styling
+            for node in G.nodes():
+                node_name = node.split('.')[-1]
+                node_type = "method" if G.nodes[node].get("class") else "function"
+
+                # Determine fill color based on type and properties
+                if node_name == "__init__" or node_name == "__new__":
+                    fillcolor = "#E53935"  # Constructor red
+                elif G.nodes[node].get("is_property", False):
+                    fillcolor = "#FF6D00"  # Property orange
+                elif G.nodes[node].get("is_async", False):
+                    fillcolor = "#AA00FF"  # Async purple
+                elif node_name.startswith('_') and not node_name.startswith('__') and not node_name.endswith('__'):
+                    fillcolor = "#757575"  # Private gray
+                elif node_type == "method":
+                    fillcolor = "#2962FF"  # Method blue
+                else:
+                    fillcolor = "#00C853"  # Function green
+
+                # Add the node with styling
+                dot.node(
+                    node,
+                    label=node_name,
+                    shape='box' if node_type == 'method' else 'ellipse',
+                    style='filled',
+                    fillcolor=fillcolor,
+                    fontcolor='white',
+                    fontname='Arial',
+                    fontsize='12'
+                )
+
+            # Add edges with styling
+            for source, target, data in G.edges(data=True):
+                is_cycle = data.get('is_cycle', False)
+
+                if is_cycle:
+                    dot.edge(source, target, color='#F44336', style='dashed', penwidth='1.5')
+                else:
+                    dot.edge(source, target, color='#616161', penwidth='1.0')
+
+            # Render and save
+            dot.render(args.output, cleanup=True)
+            logger.info(f"{args.format.upper()} saved to {args.output}.{args.format}")
+
+        except (ImportError, Exception) as e:
+            logger.error(f"Failed to generate {args.format}: {str(e)}")
+            logger.warning(f"Falling back to D3.js HTML visualization")
+            generate_d3_visualization(G, f"{os.path.splitext(args.output)[0]}.html", project_name)
     else:
-        print(mermaid_code)
+        # This shouldn't happen due to argument choices, but just in case
+        logger.error(f"Unsupported output format: {args.format}")
 
 if __name__ == "__main__":
     main()
